@@ -15,12 +15,14 @@ import requests
 import sys
 import certifi
 
+
+#app = dash.Dash(__name__,external_stylesheets = [dbc.themes.CYBORG])
 app = dash.Dash(__name__, external_stylesheets = [dbc.themes.CYBORG])
 server = app.server
 
 
 
-#CONNECTION TO MONGO DB
+#CONNECTION TO GIT REPO
 ca = certifi.where()
 df_hourly = pd.read_csv('https://raw.githubusercontent.com/LudovicoLanzo92/CER_DB/main/hourly_database_ID202206.csv',
                         low_memory=False)
@@ -45,6 +47,7 @@ FROM df_hourly
 GROUP BY date, anno, mese, fascia_oraria, stabilimento
 '''
 linebar_df = ps.sqldf(linebar_query, locals())
+linebar_df_dropdown_options = linebar_df['stabilimento'].unique()
 
 
 
@@ -103,7 +106,7 @@ app.layout = dbc.Container([
                 dcc.Dropdown(
                         id='_dropdown_stabilimento_',
                         multi=True,
-                        options=[{'label': stabilimento, 'value': stabilimento} for stabilimento in radar_chart_stab_dropdown_options],
+                        options=[{'label': stabilimento, 'value': stabilimento} for stabilimento in linebar_df_dropdown_options],
                         value=['Frigo', 'Pozzo Conte', 'Pozzo di casa'],
                         placeholder='Select Profile',
                         style={'color':'blue',
@@ -155,6 +158,7 @@ app.layout = dbc.Container([
                     ])
         ],),
     ])
+
 
 ], fluid=True)
 
@@ -225,6 +229,8 @@ def update_linebar_chart(value_1, value_2, value_3):
 
 
 
+
 #                 !!!RUNNING!!!
+
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', port=8000)
