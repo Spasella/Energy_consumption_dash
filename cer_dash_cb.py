@@ -11,7 +11,10 @@ from plotly.offline import plot
 from dash import Dash, dcc, html, Input, Output
 from datetime import date
 import json
+from tqdm import tqdm
 import requests
+import holidays
+
 import sys
 import certifi
 
@@ -22,7 +25,7 @@ server = app.server
 
 
 
-#CONNECTION TO GIT REPO
+#CONNECTION TO MONGO DB
 ca = certifi.where()
 df_hourly = pd.read_csv('https://raw.githubusercontent.com/LudovicoLanzo92/CER_DB/main/hourly_database_ID202206.csv',
                         low_memory=False)
@@ -47,7 +50,85 @@ FROM df_hourly
 GROUP BY date, anno, mese, fascia_oraria, stabilimento
 '''
 linebar_df = ps.sqldf(linebar_query, locals())
-linebar_df_dropdown_options = linebar_df['stabilimento'].unique()
+
+
+
+
+
+
+#2 - RADAR WEEKDAYS CHART DATASET
+#---------------
+#radar_chart_1_df = df_hourly = df_hourly.loc[df_hourly['stabilimento'] == "Frigo"]
+#radar_chart_1_df['hour'] = radar_chart_1_df['hour'].astype(str)
+radar_chart_stab_query = """
+    SELECT stabilimento, ID_Utente, giorno_sett,  SUM(consumi_kw_h) as consumi_kw_h,
+    CASE 
+        WHEN hour like '0' or hour like '1' THEN '0-1'
+        WHEN hour like '2' or hour like '3' THEN '2-3'
+        WHEN hour like '4' or hour like '5' THEN '4-5'
+        WHEN hour like '6' or hour like '7' THEN '6-7'
+        WHEN hour like '8' or hour like '9' THEN '8-9'
+        WHEN hour like '10' or hour like '11' THEN '10-11'
+        WHEN hour like '12' or hour like '13' THEN '12-13'
+        WHEN hour like '14' or hour like '15' THEN '14-15'
+        WHEN hour like '16' or hour like '17' THEN '16-17'
+        WHEN hour like '18' or hour like '19' THEN '18-19'
+        WHEN hour like '20' or hour like '21' THEN '20-21'
+        WHEN hour like '22' or hour like '23' THEN '22-23'
+
+    END AS hour_group
+
+    FROM df_hourly
+    WHERE ID_Utente like 'ID202206'
+    GROUP BY  hour_group, ID_Utente, stabilimento, giorno_sett
+    """
+radar_chart_stab_df = ps.sqldf(radar_chart_stab_query, locals())
+radar_chart_stab_dropdown_options = radar_chart_stab_df['stabilimento'].unique()
+#print(radar_chart_stab_df['hour_group'].unique())
+
+
+
+
+#3 - RADAR MONTHS CHART DATASET
+#---------------
+radar_chart_2_query = """
+    SELECT stabilimento, ID_Utente, mese,  SUM(consumi_kw_h) as consumi_kw_h,
+    CASE 
+        WHEN hour like '0' or hour like '1' THEN '0-1'
+        WHEN hour like '2' or hour like '3' THEN '2-3'
+        WHEN hour like '4' or hour like '5' THEN '4-5'
+        WHEN hour like '6' or hour like '7' THEN '6-7'
+        WHEN hour like '8' or hour like '9' THEN '8-9'
+        WHEN hour like '10' or hour like '11' THEN '10-11'
+        WHEN hour like '12' or hour like '13' THEN '12-13'
+        WHEN hour like '14' or hour like '15' THEN '14-15'
+        WHEN hour like '16' or hour like '17' THEN '16-17'
+        WHEN hour like '18' or hour like '19' THEN '18-19'
+        WHEN hour like '20' or hour like '21' THEN '20-21'
+        WHEN hour like '22' or hour like '23' THEN '22-23'
+
+    END AS hour_group
+
+
+    FROM df_hourly
+    WHERE ID_Utente like 'ID202206'
+    GROUP BY  hour_group, ID_Utente, stabilimento, mese
+    """
+radar_chart_2_df = ps.sqldf(radar_chart_2_query, locals())
+
+
+
+
+
+#2 - LINEBAR MONTHLY DATASET
+#---------------
+linebar_monthly_query = '''
+SELECT anno, mese, fascia_oraria, stabilimento, ROUND(SUM(consumi_kw_h), 2) as consumi_kw_h
+FROM df_hourly
+GROUP BY mese, anno, fascia_oraria, stabilimento
+'''
+linebar_monthly_df = ps.sqldf(linebar_monthly_query, locals())
+
 
 
 
@@ -106,7 +187,7 @@ app.layout = dbc.Container([
                 dcc.Dropdown(
                         id='_dropdown_stabilimento_',
                         multi=True,
-                        options=[{'label': stabilimento, 'value': stabilimento} for stabilimento in linebar_df_dropdown_options],
+                        options=[{'label': stabilimento, 'value': stabilimento} for stabilimento in radar_chart_stab_dropdown_options],
                         value=['Frigo', 'Pozzo Conte', 'Pozzo di casa'],
                         placeholder='Select Profile',
                         style={'color':'blue',
@@ -157,7 +238,14 @@ app.layout = dbc.Container([
                         ])
                     ])
         ],),
-    ])
+    ]),
+    dbc.Row([
+        dbc.Col([dcc.Graph(id='graph_radar_weekdays')], xl=6, lg=6, md=6, sm=6, xs=6),
+        dbc.Col([dcc.Graph(id='graph_radar_month')], xl=6, lg=6, md=6, sm=6, xs=6),
+    ], style= {'margin-top':'20px', 'margin-bot':'10px', 'height':'auto'}),
+    dbc.Row([
+        dbc.Col([dcc.Graph(id='linebar_monthly')], xl=12, lg=12, md=12, sm=12, xs=12)
+    ],style= {'margin-top':'20px', 'margin-bot':'10px', 'margin-right':'3px'})
 
 
 ], fluid=True)
@@ -224,6 +312,93 @@ def update_linebar_chart(value_1, value_2, value_3):
     ))
     return fig
 
+#----------------------------------------------------
+
+#2- RADAR WEEKAYS CALLBACK
+@app.callback(
+    Output('graph_radar_weekdays', 'figure'),
+    [Input('_dropdown_stabilimento_', 'value')]
+)
+def update_figure_radar_chart_1(value):
+    filtered_data = radar_chart_stab_df[radar_chart_stab_df["stabilimento"].isin(value)]
+
+    fig = px.line_polar(filtered_data, r="consumi_kw_h", theta="giorno_sett", color="hour_group",
+                        custom_data=['stabilimento'],
+                        color_discrete_sequence=px.colors.sequential.Blues_r,
+                        template="plotly_dark",
+                        hover_data=['consumi_kw_h'],
+                        labels={'consumi_kw_h':'Consumi in KW/H'}
+                      )
+
+    fig.update_traces(fill='toself')
+    fig.layout.title.text = "Weekday Consumption by hours"
+    fig.update_layout(legend=dict(orientation="h"))
+    #plot(fig)
+    return fig
+#----------------------------------------------------
+
+#3- RADAR MONTH CALLBACK
+@app.callback(
+    Output('graph_radar_month', 'figure'),
+    [Input('_dropdown_stabilimento_', 'value')]
+)
+def update_figure_radar_chart_2(value):
+    filtered_data = radar_chart_2_df[radar_chart_2_df["stabilimento"].isin(value)]
+
+    fig = px.bar_polar(filtered_data, r="consumi_kw_h", theta="mese", color="hour_group",
+                       color_discrete_sequence= px.colors.sequential.Plasma_r,
+                       custom_data=['stabilimento'],
+                       hover_data=['consumi_kw_h'],
+
+                       labels={'consumi_kw_h': 'Consumi in KW/H'},
+
+                       title="Consumo mensile per gruppi di ore",
+                       template = "plotly_dark",
+
+                      )
+    fig.update_layout(legend=dict(orientation="h"))
+
+    return fig
+
+
+#----------------------------------------------------
+
+
+
+#----------------------------------------------------
+#5 - LINEBAR MONTHLY CALLBACK
+
+@app.callback(
+Output('linebar_monthly', 'figure'),
+    [Input('_dropdown_stabilimento_', 'value'),
+     Input('_dropdown_fascia_oraria_', 'value'),
+     Input('_dropdown_anno_', 'value')
+     #Input('_RangeSlider_months_', 'value')
+     ]
+)
+def update_linebar_chart(value_1, value_2, value_3):
+    filtered_data_1 = linebar_monthly_df[linebar_monthly_df["stabilimento"].isin(value_1)]
+    filtered_data_2 = filtered_data_1[filtered_data_1['fascia_oraria'].isin(value_2)]
+    filtered_data_3 = filtered_data_2[filtered_data_2['anno'].isin(value_3)]
+    #filtered_data_4 = filtered_data_3[filtered_data_3['mese'].isin(value_4)]
+
+    fig = px.bar(filtered_data_3, x='mese', y='consumi_kw_h',
+                 hover_data=['consumi_kw_h', 'fascia_oraria'], color='stabilimento',
+                 color_discrete_sequence=['#0d47a1', '#2962ff', '#e3f2fd'],
+                 custom_data=['stabilimento', 'fascia_oraria', 'anno'],
+                 labels={'consumi_kw_h': 'Consumi in KW/h',
+                         'fascia_oraria': 'Fascia Oraria'},
+
+                 height=400)
+    fig.update_layout(template='plotly_dark')
+    fig.update_layout(legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="right",
+        x=1
+    ))
+    return fig
 
 
 
