@@ -11,15 +11,11 @@ from plotly.offline import plot
 from dash import Dash, dcc, html, Input, Output
 from datetime import date
 import json
-from tqdm import tqdm
 import requests
-import holidays
-
 import sys
 import certifi
 
 
-#app = dash.Dash(__name__,external_stylesheets = [dbc.themes.CYBORG])
 app = dash.Dash(__name__, external_stylesheets = [dbc.themes.CYBORG])
 server = app.server
 
