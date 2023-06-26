@@ -9,8 +9,6 @@ import plotly.graph_objects as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
 import plotly.subplots as sp
-import dash_ag_grid as dag
-import dash_daq as daq
 import plotly.io as pio
 
 
@@ -19,7 +17,6 @@ import plotly.io as pio
 #Guida to .exe
 #https://github.com/sharonkatz510/dash-to-exe
 
-from fantaelements import*
 
 pd.set_option("display.max_columns", None)
 pd.set_option("display.max_rows", None)
