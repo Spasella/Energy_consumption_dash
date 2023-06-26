@@ -731,7 +731,7 @@ stats2_players1 = dbc.Row([
 #APP LAYOUT
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
-
+server = app.server
 
 
 app.layout = html.Div(
