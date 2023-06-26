@@ -726,19 +726,6 @@ stats2_players1 = dbc.Row([
 
 
 
-#Gauge Players
-
-gauge_player1 = html.Div([
-    daq.Gauge(
-        id='my-gauge-1',
-        label="Default",
-        value=6
-    )])
-
-
-
-
-
 
 
 #APP LAYOUT
