@@ -1,15 +1,5 @@
-# Project Documentation
-This is the documentation for the project that utilizes the Dash framework to create a web application for data visualization and analysis. The project is built using Python and incorporates various libraries such as Dash, Plotly, and pandas.
-
-# Table of Contents
-Introduction
-Installation
-Usage
-Features
-Data Source
-Dependencies
-Introduction
-The project aims to provide a user-friendly interface for visualizing and analyzing data using interactive charts and graphs. The web application allows users to explore different aspects of the data and gain insights from it. The project utilizes the Dash framework, which is a powerful tool for creating web applications with Python.
+# Exploring some Consumption Profiles 
+https://cer-dash-cb1.onrender.com/
 
 # Installation
 To run the project locally, follow these steps:
